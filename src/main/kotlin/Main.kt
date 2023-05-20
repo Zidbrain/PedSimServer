@@ -9,180 +9,91 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 fun main() {
+    val schedule = generateSchedule()
     embeddedServer(Netty, 8080) {
         routing {
-            val schedule = Schedule(
-                listOf(
-                    ScheduleRecord(
-                        from = "Baumanskaya",
-                        to = "BMSTU",
-                        fromTime = 0.0f,
-                        toTime = 400.0f,
-                        amount = 3000
-                    ),
-                    ScheduleRecord(
-                        from = "Baumanskaya",
-                        to = "ULK",
-                        fromTime = 0.0f,
-                        toTime = 400.0f,
-                        amount = 3000
-                    ),
-                    ScheduleRecord(
-                        from = "Baumanskaya",
-                        to = "BMSTU",
-                        fromTime = 0.0f,
-                        toTime = 90.0f,
-                        amount = 800
-                    ),
-                    ScheduleRecord(
-                        from = "Baumanskaya",
-                        to = "ULK",
-                        fromTime = 0.0f,
-                        toTime = 90.0f,
-                        amount = 800
-                    ),
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "ULK",
-                        fromTime = 90.0f,
-                        toTime = 180.0f,
-                        amount = 300
-                    ),
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "Energo",
-                        fromTime = 90.0f,
-                        toTime = 180.0f,
-                        amount = 150
-                    ),
-                    ScheduleRecord(
-                        from = "ULK",
-                        to = "BMSTU",
-                        fromTime = 90.0f,
-                        toTime = 180.0f,
-                        amount = 300
-                    ), // 2
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "ULK",
-                        fromTime = 180.0f,
-                        toTime = 270.0f,
-                        amount = 350
-                    ),
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "Energo",
-                        fromTime = 180.0f,
-                        toTime = 270.0f,
-                        amount = 100
-                    ),
-                    ScheduleRecord(
-                        from = "Energo",
-                        to = "ULK",
-                        fromTime = 180.0f,
-                        toTime = 270.0f,
-                        amount = 20
-                    ),
-                    ScheduleRecord(
-                        from = "Energo",
-                        to = "BMSTU",
-                        fromTime = 180.0f,
-                        toTime = 270.0f,
-                        amount = 25
-                    ),
-                    ScheduleRecord(
-                        from = "ULK",
-                        to = "BMSTU",
-                        fromTime = 180.0f,
-                        toTime = 270.0f,
-                        amount = 350
-                    ),
-                    ScheduleRecord(
-                        from = "ULK",
-                        to = "Baumanskaya",
-                        fromTime = 180.0f,
-                        toTime = 270.0f,
-                        amount = 100
-                    ),
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "Baumanskaya",
-                        fromTime = 180.0f,
-                        toTime = 270.0f,
-                        amount = 100
-                    ), // 3
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "ULK",
-                        fromTime = 270.0f,
-                        toTime = 360.0f,
-                        amount = 400
-                    ),
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "Energo",
-                        fromTime = 270.0f,
-                        toTime = 360.0f,
-                        amount = 100
-                    ),
-                    ScheduleRecord(
-                        from = "Energo",
-                        to = "ULK",
-                        fromTime = 270.0f,
-                        toTime = 360.0f,
-                        amount = 50
-                    ),
-                    ScheduleRecord(
-                        from = "Energo",
-                        to = "BMSTU",
-                        fromTime = 270.0f,
-                        toTime = 360.0f,
-                        amount = 60
-                    ),
-                    ScheduleRecord(
-                        from = "ULK",
-                        to = "BMSTU",
-                        fromTime = 270.0f,
-                        toTime = 360.0f,
-                        amount = 400
-                    ),
-                    ScheduleRecord(
-                        from = "ULK",
-                        to = "Baumanskaya",
-                        fromTime = 270.0f,
-                        toTime = 360.0f,
-                        amount = 400
-                    ),
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "Baumanskaya",
-                        fromTime = 270.0f,
-                        toTime = 360.0f,
-                        amount = 300
-                    ),//4
-                    ScheduleRecord(
-                        from = "ULK",
-                        to = "Baumanskaya",
-                        fromTime = 360.0f,
-                        toTime = 450.0f,
-                        amount = 700
-                    ),
-                    ScheduleRecord(
-                        from = "BMSTU",
-                        to = "Baumanskaya",
-                        fromTime = 360.0f,
-                        toTime = 450.0f,
-                        amount = 700
-                    ),
-                )
-            )
-
             get("/") {
                 val text = Json.encodeToString(schedule)
                 call.respondText(ContentType.parse("application/json")) { text }
             }
         }
     }.start(true)
+}
+
+fun generateSchedule(): Schedule {
+    val schedule = mutableListOf<ScheduleRecord>()
+    val periods = List(4) {
+        (it * 90f) to ((it + 1) * 90f)
+    }
+
+    fun handlePath(
+        path: Pair<String, String>,
+        forward: List<Float>,
+        backward: List<Float>
+    ): List<ScheduleRecord> {
+        val res = mutableListOf<ScheduleRecord>()
+        val (from, to) = path
+        periods.forEachIndexed { i, (start, end) ->
+            if (forward[i] != 0f)
+                res.add(
+                    ScheduleRecord(
+                        from = from,
+                        to = to,
+                        fromTime = start,
+                        toTime = end,
+                        rate = forward[i]
+                    )
+                )
+            if (backward[i] != 0f)
+                res.add(
+                    ScheduleRecord(
+                        from = to,
+                        to = from,
+                        fromTime = start,
+                        toTime = end,
+                        rate = backward[i]
+                    )
+                )
+        }
+        return res
+    }
+
+    schedule.addAll(
+        listOf(
+            handlePath(
+                path = "Baumanskaya" to "BMSTU-Back",
+                forward = listOf(15f, 8f, 3f, 0f),
+                backward = listOf(0f, 3f, 8f, 15f)
+            ),
+            handlePath(
+                path = "Baumanskaya" to "ULK",
+                forward = listOf(16f, 7f, 3f, 0f),
+                backward = listOf(0f, 3f, 7f, 16f)
+            ),
+            handlePath(
+                path = "Baumanskaya" to "Energo",
+                forward = listOf(3f, 1.5f, 1f, 0f),
+                backward = listOf(0f, 1f, 1.5f, 3f)
+            ),
+            handlePath(
+                path = "BMSTU-Front" to "Energo",
+                forward = listOf(0f, 0.7f, 0.7f, 0f),
+                backward = listOf(0f, 0.7f, 0.7f, 2f)
+            ),
+            handlePath(
+                path = "BMSTU-Front" to "ULK",
+                forward = listOf(0f, 1f, 1f, 0f),
+                backward = listOf(0f, 1f, 1f, 2f)
+            ),
+            handlePath(
+                path = "Energo" to "ULK",
+                forward = listOf(0f, 0.4f, 0.4f, 0f),
+                backward = listOf(0f, 0.4f, 0.4f, 2f)
+            ),
+        ).flatten()
+    )
+
+    return Schedule(records = schedule)
 }
 
 @Serializable
@@ -196,5 +107,5 @@ data class ScheduleRecord(
     val to: String,
     val fromTime: Float,
     val toTime: Float,
-    val amount: Int,
+    val rate: Float,
 )
